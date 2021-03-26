@@ -76,6 +76,7 @@ export const performCalculations = (data: Results) => {
 };
 
 export type Row = ReturnType<typeof performCalculations>[number];
+export type RowByGroupId = { [groupId: string]: Row[] };
 
 /**
  * Turns the row output into a csv
@@ -97,22 +98,32 @@ const padded = (padding: number) => (str: string | number) => `${str}`.padEnd(pa
 const paddedKey = padded(50);
 const paddedValue = padded(20);
 
-export const printCSVSummary = (resultNames: string[], results: Row[][]) => {
+export const printCSVSummary = (resultNames: string[], results: RowByGroupId[]) => {
   debug(`${paddedKey('Type')} | ${resultNames.map(paddedValue).join('| ')}`);
-  debug('-'.padEnd(50 + 20 * resultNames.length, '-'));
-  stdout(`Type,${resultNames.join(',')}`);
-  const toPrint = {} as any;
-  results.forEach((rows) => {
-    rows.forEach(({ key, medianValue }) => {
-      if (toPrint[key]) {
-        toPrint[key].push(medianValue);
-      } else {
-        toPrint[key] = [medianValue];
-      }
+
+  const toPrint = results
+    .map((rows) => Object.entries(rows))
+    .reduce((acc, rows) => {
+      rows.forEach(([groupId, resultSet]) => {
+        resultSet.forEach(({ key, medianValue }) => {
+          if (acc[groupId] && acc[groupId][key]) {
+            acc[groupId][key].push(medianValue);
+          } else {
+            acc[groupId] = { ...acc[groupId], [key]: [medianValue] };
+          }
+        });
+      });
+
+      return acc;
+    }, {} as { [groupId: string]: { [key: string]: number[] } });
+
+  Object.entries(toPrint).forEach(([groupId, resultSet]) => {
+    debug('-'.padEnd(50 + 20 * resultNames.length, '-'));
+    debug(`${paddedKey(groupId)}`);
+    debug('-'.padEnd(50 + 20 * resultNames.length, '-'));
+
+    Object.entries(resultSet).forEach(([key, values]) => {
+      debug(`${paddedKey(key)} | ${(values as number[]).map(paddedValue).join('| ')}`);
     });
-  });
-  Object.entries(toPrint).forEach(([key, values]) => {
-    debug(`${paddedKey(key)} | ${(values as string[]).map(paddedValue).join('| ')}`);
-    stdout(`${key},${(values as string[]).join(',')}`);
   });
 };

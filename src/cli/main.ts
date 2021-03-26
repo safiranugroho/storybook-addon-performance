@@ -12,6 +12,7 @@ import {
   printCSVSummary,
   convertToTaskValueMap,
   combineTaskResultsByGroupId,
+  RowByGroupId,
 } from './utils';
 
 const main = (...args: string[]) => {
@@ -56,7 +57,7 @@ const main = (...args: string[]) => {
     .filter(({ name }) => name);
 
   const resultNames: string[] = [];
-  const resultSets: Row[][] = [];
+  const resultSets: RowByGroupId[] = [];
 
   directoryResultSets.forEach(({ name, ...resultsByGroupId }) => {
     const resultName = path.basename(name);
@@ -67,7 +68,7 @@ const main = (...args: string[]) => {
 
       stdout(groupId);
       printCSV(finalResults);
-      resultSets.push(finalResults);
+      resultSets.push({ [groupId]: finalResults });
     });
 
     stdout();
